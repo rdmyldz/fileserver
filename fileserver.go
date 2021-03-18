@@ -78,7 +78,7 @@ func (app *application) makeZip(w http.ResponseWriter, r *http.Request) {
 	file := strings.TrimPrefix(val, "/files/")
 	log.Printf("file: %q\n", file)
 	log.Printf("%s is getting zipped...", file)
-	err := zipIt(file)
+	err := zipIt(file, w)
 	if err != nil {
 		log.Printf("returned error from zipIt: %v\n", err)
 		http.Error(w, "internal server error: the file not zipped", http.StatusInternalServerError)
@@ -88,25 +88,19 @@ func (app *application) makeZip(w http.ResponseWriter, r *http.Request) {
 	log.Printf("%s is just zipped...", file)
 }
 
-func zipIt(dirname string) error {
+func zipIt(dirname string, w io.Writer) error {
 	fmt.Println("*********************")
 	baseName := filepath.Base(dirname)
 	zipName := baseName + ".zip"
 	dirPath := filepath.Dir(dirname)
 	fmt.Printf("zipName: %q -- dirPath: %q\n", zipName, dirPath)
 	fmt.Println("*********************")
-	fPath := filepath.Join(*targetDir, zipName)
-	tmpfile, err := os.Create(fPath)
-	if err != nil {
-		return err
-	}
-	defer tmpfile.Close()
-	zw := zip.NewWriter(tmpfile)
+	zw := zip.NewWriter(w)
 	defer zw.Close()
 
 	walkdir := filepath.Join(*sourceDir, dirPath, baseName)
 	fmt.Printf("walkdir: %q\n", walkdir)
-	err = filepath.Walk(walkdir, func(path string, info fs.FileInfo, err error) error {
+	err := filepath.Walk(walkdir, func(path string, info fs.FileInfo, err error) error {
 		log.Printf("inside walkFunc -- walkdir: %q\n", walkdir)
 		log.Printf("walking: %#v\n", path)
 		if err != nil {
@@ -130,7 +124,6 @@ func zipIt(dirname string) error {
 			log.Printf("zw.Create(newPath) - error while creating the file path: %q\n", newPath)
 			return err
 		}
-
 		_, err = io.Copy(f, file)
 		if err != nil {
 			return err
@@ -175,6 +168,8 @@ func (app *application) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if strings.HasPrefix(r.URL.Path, "/files/") && r.Method == "POST" {
+		w.Header().Set("Content-Disposition", "attachment; filename=Wiki.zip")
+		w.Header().Set("Content-Type", "application/octet-stream")
 		app.makeZip(w, r)
 		return
 	}
