@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Files</title>
+</head>
+
+<body>
+    <table name="filetable">
+        {{ range . }}
+        {{if .IsDir}}
+        <tr id="{{.Index}}">
+            <td><a href="{{ .FPath }}">{{.Fname}}</a></td>
+            <td>
+                <form action="/files/" method="post">
+                    <button type="submit" name="zip" value="{{.FPath}}">makezip</button></li>
+                </form>
+            </td>
+        </tr>
+        {{else}}
+        <tr id="{{.Index}}">
+            <td><a href="{{ .FPath }}">{{.Fname}}</a></td>
+        </tr>
+        {{ end }}
+        {{end}}
+    </table>
+</body>
+
+</html
