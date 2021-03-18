@@ -2,6 +2,7 @@ package main
 
 import (
 	"archive/zip"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -44,8 +45,13 @@ func (app *application) handleServingFiles(w http.ResponseWriter, r *http.Reques
 	sourcePath := filepath.Join(*sourceDir, trimmedPath)
 	files, err := listFiles(sourcePath)
 	if err != nil {
-		log.Printf("error while reading the directory %s -- files: %+v -- error:%v\n", sourcePath, files, err)
-		http.ServeFile(w, r, sourcePath) // if it's not a directory,jusr serve it
+		var perr *fs.PathError
+		if errors.As(err, &perr) {
+			http.ServeFile(w, r, sourcePath) // if it's not a directory,just serve it
+			return
+		}
+		log.Printf("error returned from listFiles(): %v\n", err)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
 	filesPathes := make([]FileInfo, 0, len(files))

@@ -6,17 +6,6 @@ import (
 	"testing"
 )
 
-type deneme struct {
-}
-
-func TestDeneme(t *testing.T) {
-	files, _ := listFiles("assets")
-	f0 := files[0]
-	fmt.Printf("files: %+v\n", f0)
-	f0info, _ := f0.Info()
-	fmt.Printf("f info:%+v\n", f0info.Name())
-}
-
 func Test_listFiles(t *testing.T) {
 	t.Run("root directory", func(t *testing.T) {
 		dirname := "."
