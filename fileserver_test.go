@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"path"
 	"testing"
@@ -67,5 +68,6 @@ func Test_listFiles(t *testing.T) {
 }
 
 func Test_makeZip(t *testing.T) {
-	zipIt("deneme1")
+	var b bytes.Buffer
+	zipIt("deneme1", &b)
 }
