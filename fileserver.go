@@ -79,9 +79,14 @@ func (app *application) makeZip(w http.ResponseWriter, r *http.Request) {
 	val := r.FormValue("zip")
 	log.Printf("form value is %q\n", val)
 	file := strings.TrimPrefix(val, "/files/")
-	log.Printf("file: %q\n", file)
 	log.Printf("%s is getting zipped...", file)
-	err := zipIt(file, w)
+	baseName := filepath.Base(file)
+	zipName := baseName + ".zip"
+	dirPath := filepath.Dir(file)
+
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", zipName))
+	w.Header().Set("Content-Type", "application/octet-stream")
+	err := zipIt(dirPath, baseName, zipName, w)
 	if err != nil {
 		log.Printf("returned error from zipIt: %v\n", err)
 		http.Error(w, "internal server error: the file not zipped", http.StatusInternalServerError)
@@ -91,19 +96,22 @@ func (app *application) makeZip(w http.ResponseWriter, r *http.Request) {
 	log.Printf("%s is just zipped...", file)
 }
 
-func zipIt(dirname string, w io.Writer) error {
-	fmt.Println("*********************")
-	baseName := filepath.Base(dirname)
-	zipName := baseName + ".zip"
-	dirPath := filepath.Dir(dirname)
-	fmt.Printf("zipName: %q -- dirPath: %q\n", zipName, dirPath)
-	fmt.Println("*********************")
-	zw := zip.NewWriter(w)
+func zipIt(dirPath, baseName, zipName string, w io.Writer) error {
+	fPath := filepath.Join(*targetDir, zipName)
+	tmpfile, err := os.Create(fPath)
+	if err != nil {
+		log.Printf("error after os.create: err:%v\n", err)
+		return err
+	}
+	defer tmpfile.Close()
+
+	mw := io.MultiWriter(w, tmpfile)
+	zw := zip.NewWriter(mw)
 	defer zw.Close()
 
 	walkdir := filepath.Join(*sourceDir, dirPath, baseName)
 	fmt.Printf("walkdir: %q\n", walkdir)
-	err := filepath.Walk(walkdir, func(path string, info fs.FileInfo, err error) error {
+	err = filepath.Walk(walkdir, func(path string, info fs.FileInfo, err error) error {
 		log.Printf("inside walkFunc -- walkdir: %q\n", walkdir)
 		log.Printf("walking: %#v\n", path)
 		if err != nil {
@@ -171,8 +179,7 @@ func (app *application) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if strings.HasPrefix(r.URL.Path, "/files/") && r.Method == "POST" {
-		w.Header().Set("Content-Disposition", "attachment; filename=Wiki.zip")
-		w.Header().Set("Content-Type", "application/octet-stream")
+
 		app.makeZip(w, r)
 		return
 	}
