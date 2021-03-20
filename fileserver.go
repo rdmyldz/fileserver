@@ -2,6 +2,7 @@ package main
 
 import (
 	"archive/zip"
+	"embed"
 	"errors"
 	"flag"
 	"fmt"
@@ -18,7 +19,7 @@ import (
 
 func (app *application) handleHome(w http.ResponseWriter, r *http.Request) {
 	log.Printf("in handleHome -req path: %q", r.URL.Path)
-	tmpl := app.templateCache["homepage.html"]
+	// tmpl := app.templateCache["homepage.html"]
 	files, err := listFiles(*targetDir)
 	if err != nil {
 		log.Println("error while listing targetDir:", err)
@@ -32,14 +33,15 @@ func (app *application) handleHome(w http.ResponseWriter, r *http.Request) {
 		filesPathes = append(filesPathes, file)
 	}
 
-	tmpl.Execute(w, filesPathes)
+	// tmpl.Execute(w, filesPathes)
+	app.templateCache.ExecuteTemplate(w, "homepage.html", filesPathes)
 
 }
 
 func (app *application) handleServingFiles(w http.ResponseWriter, r *http.Request) {
 	log.Println("handleServingFiles just got hit")
 	log.Printf("path:%q\n", r.URL.Path)
-	tmpl := app.templateCache["files.html"]
+	// tmpl := app.templateCache["files.html"]
 
 	trimmedPath := strings.TrimPrefix(r.URL.Path, "/files/")
 	sourcePath := filepath.Join(*sourceDir, trimmedPath)
@@ -67,7 +69,8 @@ func (app *application) handleServingFiles(w http.ResponseWriter, r *http.Reques
 		filesPathes = append(filesPathes, file)
 	}
 
-	tmpl.Execute(w, filesPathes)
+	// tmpl.Execute(w, filesPathes)
+	app.templateCache.ExecuteTemplate(w, "files.html", filesPathes)
 }
 
 func (app *application) makeZip(w http.ResponseWriter, r *http.Request) {
@@ -147,7 +150,7 @@ func (app *application) handleDownload(w http.ResponseWriter, r *http.Request) {
 }
 
 type application struct {
-	templateCache map[string]*template.Template
+	templateCache *template.Template
 }
 
 // FileInfo holds the file infos
@@ -184,11 +187,14 @@ var sourceDir = flag.String("s", "assets", "source directory path")
 var targetDir = flag.String("t", "tmp-assets", "source directory path")
 var port = flag.String("p", ":8080", "port for listening")
 
+//go:embed templates
+var content embed.FS
+
 func main() {
 
 	flag.Parse()
 
-	templateCache, err := newTemplateCache("templates")
+	templateCache, err := template.ParseFS(content, "templates/*.html")
 	if err != nil {
 		log.Fatalln("error while making template cache: ", err)
 	}
