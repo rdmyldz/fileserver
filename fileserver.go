@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"strings"
 	"text/template"
+	"time"
 )
 
 func (app *application) handleHome(w http.ResponseWriter, r *http.Request) {
@@ -28,8 +29,14 @@ func (app *application) handleHome(w http.ResponseWriter, r *http.Request) {
 	}
 	filesPathes := make([]FileInfo, 0, len(files))
 	for i, f := range files {
+		fi, err := f.Info()
+		if err != nil {
+			log.Println("error while listing targetDir:", err)
+			http.Error(w, "internal server error while getting file info", http.StatusInternalServerError)
+		}
+		createdAt := fi.ModTime()
 		fPath := filepath.Join("download", f.Name())
-		file := FileInfo{Fname: f.Name(), FPath: fPath, Index: i}
+		file := FileInfo{Fname: f.Name(), FPath: fPath, Index: i, CreatedAt: createdAt}
 		filesPathes = append(filesPathes, file)
 	}
 
@@ -163,10 +170,11 @@ type application struct {
 
 // FileInfo holds the file infos
 type FileInfo struct {
-	IsDir bool // true if its a directory
-	FPath string
-	Fname string
-	Index int
+	IsDir     bool // true if its a directory
+	FPath     string
+	Fname     string
+	Index     int
+	CreatedAt time.Time
 }
 
 func (app *application) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -179,7 +187,6 @@ func (app *application) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if strings.HasPrefix(r.URL.Path, "/files/") && r.Method == "POST" {
-
 		app.makeZip(w, r)
 		return
 	}
@@ -187,6 +194,8 @@ func (app *application) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if strings.HasPrefix(r.URL.Path, "/download/") && r.Method == "GET" {
 		app.handleDownload(w, r)
 		return
+	} else {
+		http.NotFound(w, r)
 	}
 }
 

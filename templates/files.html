@@ -9,6 +9,12 @@
 </head>
 
 <body>
+    <hr>
+    <nav>
+        <a href='/'>Home</a>
+        <a href='/files/'>Files</a>
+    </nav>
+    <hr>
     <table name="filetable">
         {{ range . }}
         {{if .IsDir}}

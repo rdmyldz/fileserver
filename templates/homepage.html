@@ -9,6 +9,12 @@
 </head>
 
 <body>
+    <hr>
+    <nav>
+        <a href='/'>Home</a>
+        <a href='/files/'>Files</a>
+    </nav>
+    <hr>
     <table name="filetable">
         {{ range . }}
         {{if .IsDir}}
@@ -23,6 +29,7 @@
         {{else}}
         <tr id="{{.Index}}">
             <td><a href="{{ .FPath }}">{{.Fname}}</a></td>
+            <td>{{ .CreatedAt }}</td>
         </tr>
         {{ end }}
         {{end}}
