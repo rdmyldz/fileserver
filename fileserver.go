@@ -214,6 +214,10 @@ var functions = template.FuncMap{
 	"formatDate": formatDate,
 }
 
+var users = map[string]string{
+	"user": "112233",
+}
+
 func main() {
 
 	flag.Parse()
@@ -226,10 +230,35 @@ func main() {
 	app := &application{templateCache: templateCache}
 
 	log.Printf("starting server on %s\n", *port)
-	err = http.ListenAndServe(*port, app)
+	err = http.ListenAndServe(*port, loggingMiddleware(app))
 	if err != nil {
 		log.Fatalln(err)
 	}
+}
+func loggingMiddleware(next http.Handler) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		username, password, ok := r.BasicAuth()
+		if !ok {
+			w.Header().Add("WWW-Authenticate", `Basic realm="restricted"`)
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+
+		if !isAuthorized(username, password) {
+			http.Error(w, "you are not allowed", http.StatusUnauthorized)
+			return
+		}
+		log.Printf("user:%s - password:%s\n", username, password)
+		next.ServeHTTP(w, r)
+	}
+}
+
+func isAuthorized(username, password string) bool {
+	pwd, ok := users[username]
+	if !ok {
+		return false
+	}
+	return pwd == password
 }
 
 func listFiles(path string) ([]fs.DirEntry, error) {
