@@ -20,7 +20,7 @@ import (
 
 func (app *application) handleHome(w http.ResponseWriter, r *http.Request) {
 	log.Printf("in handleHome -req path: %q", r.URL.Path)
-	// tmpl := app.templateCache["homepage.html"]
+	tmpl := app.templateCache["homepage.html"]
 	files, err := listFiles(*targetDir)
 	if err != nil {
 		log.Println("error while listing targetDir:", err)
@@ -40,15 +40,15 @@ func (app *application) handleHome(w http.ResponseWriter, r *http.Request) {
 		filesPathes = append(filesPathes, file)
 	}
 
-	// tmpl.Execute(w, filesPathes)
-	app.templateCache.ExecuteTemplate(w, "homepage.html", filesPathes)
+	tmpl.Execute(w, filesPathes)
+	// app.templateCache.ExecuteTemplate(w, "homepage.html", filesPathes)
 
 }
 
 func (app *application) handleServingFiles(w http.ResponseWriter, r *http.Request) {
 	log.Println("handleServingFiles just got hit")
 	log.Printf("path:%q\n", r.URL.Path)
-	// tmpl := app.templateCache["files.html"]
+	tmpl := app.templateCache["files.html"]
 
 	trimmedPath := strings.TrimPrefix(r.URL.Path, "/files/")
 	sourcePath := filepath.Join(*sourceDir, trimmedPath)
@@ -76,8 +76,8 @@ func (app *application) handleServingFiles(w http.ResponseWriter, r *http.Reques
 		filesPathes = append(filesPathes, file)
 	}
 
-	// tmpl.Execute(w, filesPathes)
-	app.templateCache.ExecuteTemplate(w, "files.html", filesPathes)
+	tmpl.Execute(w, filesPathes)
+	// app.templateCache.ExecuteTemplate(w, "files.html", filesPathes)
 }
 
 func (app *application) makeZip(w http.ResponseWriter, r *http.Request) {
@@ -165,7 +165,7 @@ func (app *application) handleDownload(w http.ResponseWriter, r *http.Request) {
 }
 
 type application struct {
-	templateCache *template.Template
+	templateCache map[string]*template.Template
 }
 
 // FileInfo holds the file infos
@@ -206,11 +206,19 @@ var port = flag.String("p", ":8080", "port for listening")
 //go:embed templates
 var content embed.FS
 
+func formatDate(t time.Time) string {
+	return t.Format("02 Jan 2006 at 15:04")
+}
+
+var functions = template.FuncMap{
+	"formatDate": formatDate,
+}
+
 func main() {
 
 	flag.Parse()
 
-	templateCache, err := template.ParseFS(content, "templates/*.html")
+	templateCache, err := newTemplateCache("templates")
 	if err != nil {
 		log.Fatalln("error while making template cache: ", err)
 	}
@@ -232,25 +240,21 @@ func listFiles(path string) ([]fs.DirEntry, error) {
 	return files, nil
 }
 
-func newTemplateCache(dir string) (map[string]*template.Template, error) {
+func newTemplateCache(dirname string) (map[string]*template.Template, error) {
 	cache := map[string]*template.Template{}
-	pages, err := filepath.Glob(filepath.Join(dir, "*.html"))
-	log.Printf("pages in the func: %s\n", pages)
+	pages, err := content.ReadDir(dirname)
 	if err != nil {
+		log.Printf("error while reading directory: %v\n", err)
 		return nil, err
 	}
-
-	for _, page := range pages {
-		name := filepath.Base(page)
-
-		ts, err := template.New(name).ParseFiles(page)
+	for _, p := range pages {
+		name := p.Name()
+		ts, err := template.New(name).Funcs(functions).ParseFS(content, dirname+"/"+name)
 		if err != nil {
+			log.Printf("error while parsing file:%s -- err:%v\n", name, err)
 			return nil, err
 		}
-
 		cache[name] = ts
 	}
-
-	log.Printf("cache map in the func: %+v\n", cache)
 	return cache, nil
 }
