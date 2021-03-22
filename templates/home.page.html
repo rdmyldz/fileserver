@@ -10,6 +10,26 @@
         td {
             padding-right: 20px;
         }
+
+
+
+        html {
+            height: 100%;
+        }
+
+        body {
+            min-height: 100%;
+            position: relative;
+        }
+
+        footer {
+            position: absolute;
+            text-align: center;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            padding-bottom: 15px;
+        }
     </style>
 </head>
 
@@ -39,6 +59,8 @@
         {{ end }}
         {{end}}
     </table>
+    {{ template "footer" .}}
+
 </body>
 
 </html

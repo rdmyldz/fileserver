@@ -20,7 +20,7 @@ import (
 
 func (app *application) handleHome(w http.ResponseWriter, r *http.Request) {
 	log.Printf("in handleHome -req path: %q", r.URL.Path)
-	tmpl := app.templateCache["homepage.html"]
+	tmpl := app.templateCache["home.page.html"]
 	files, err := listFiles(*targetDir)
 	if err != nil {
 		log.Println("error while listing targetDir:", err)
@@ -48,7 +48,7 @@ func (app *application) handleHome(w http.ResponseWriter, r *http.Request) {
 func (app *application) handleServingFiles(w http.ResponseWriter, r *http.Request) {
 	log.Println("handleServingFiles just got hit")
 	log.Printf("path:%q\n", r.URL.Path)
-	tmpl := app.templateCache["files.html"]
+	tmpl := app.templateCache["files.page.html"]
 
 	trimmedPath := strings.TrimPrefix(r.URL.Path, "/files/")
 	sourcePath := filepath.Join(*sourceDir, trimmedPath)
@@ -210,8 +210,13 @@ func formatDate(t time.Time) string {
 	return t.Format("02 Jan 2006 at 15:04")
 }
 
+func currentYear() string {
+	return fmt.Sprint(time.Now().Year())
+}
+
 var functions = template.FuncMap{
-	"formatDate": formatDate,
+	"formatDate":  formatDate,
+	"currentYear": currentYear,
 }
 
 var users = map[string]string{
@@ -276,14 +281,38 @@ func newTemplateCache(dirname string) (map[string]*template.Template, error) {
 		log.Printf("error while reading directory: %v\n", err)
 		return nil, err
 	}
+	log.Printf("pages:%+v\n", pages)
 	for _, p := range pages {
 		name := p.Name()
+		if !strings.HasSuffix(name, "page.html") {
+			log.Printf("%s got jumped\n", name)
+			continue
+		}
 		ts, err := template.New(name).Funcs(functions).ParseFS(content, dirname+"/"+name)
 		if err != nil {
 			log.Printf("error while parsing file:%s -- err:%v\n", name, err)
 			return nil, err
 		}
+		ts, err = ts.ParseFS(content, dirname+"/"+"*partial.html")
+		if err != nil {
+			return nil, err
+		}
 		cache[name] = ts
 	}
+
+	// pages, err := filepath.Glob(filepath.Join(dirname, "*page.html"))
+	// log.Printf("pages in the func: %s\n", pages)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// for _, page := range pages {
+	// 	name := filepath.Base(page)
+
+	// 	ts, err := template.New(name).Funcs(functions).ParseFS(content, page)
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	// 	cache[name] = ts
+	// }
 	return cache, nil
 }
