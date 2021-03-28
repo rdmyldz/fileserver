@@ -199,8 +199,8 @@ func (app *application) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-var sourceDir = flag.String("s", "assets", "source directory path")
-var targetDir = flag.String("t", "tmp-assets", "source directory path")
+var sourceDir = flag.String("s", "", "source directory path")
+var targetDir = flag.String("t", "", "source directory path")
 var port = flag.String("p", ":8080", "port for listening")
 
 //go:embed templates
@@ -224,8 +224,12 @@ var users = map[string]string{
 }
 
 func main() {
-
 	flag.Parse()
+	if *sourceDir == "" || *targetDir == "" {
+		fmt.Println("supply source and target directory to run")
+		flag.Usage()
+		os.Exit(1)
+	}
 
 	templateCache, err := newTemplateCache("templates")
 	if err != nil {
@@ -300,19 +304,5 @@ func newTemplateCache(dirname string) (map[string]*template.Template, error) {
 		cache[name] = ts
 	}
 
-	// pages, err := filepath.Glob(filepath.Join(dirname, "*page.html"))
-	// log.Printf("pages in the func: %s\n", pages)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// for _, page := range pages {
-	// 	name := filepath.Base(page)
-
-	// 	ts, err := template.New(name).Funcs(functions).ParseFS(content, page)
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-	// 	cache[name] = ts
-	// }
 	return cache, nil
 }
